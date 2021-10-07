@@ -3,10 +3,13 @@
 //
 
 #pragma once
+#include <gl/GL.h>
 
 
 class CWinOGLView : public CView
 {
+private:
+	HGLRC m_hRC;
 protected: // シリアル化からのみ作成します。
 	CWinOGLView() noexcept;
 	DECLARE_DYNCREATE(CWinOGLView)
@@ -39,6 +42,8 @@ protected:
 	DECLARE_MESSAGE_MAP()
 public:
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
+	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
+	afx_msg void OnDestroy();
 };
 
 #ifndef _DEBUG  // WinOGLView.cpp のデバッグ バージョン
