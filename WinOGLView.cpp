@@ -1,6 +1,4 @@
-﻿
-// WinOGLView.cpp : CWinOGLView クラスの実装
-//
+﻿// WinOGLView.cpp : CWinOGLView クラスの実装
 
 #include "pch.h"
 #include "framework.h"
@@ -26,14 +24,16 @@ BEGIN_MESSAGE_MAP(CWinOGLView, CView)
 	ON_WM_LBUTTONDOWN()
 	ON_WM_CREATE()
 	ON_WM_DESTROY()
+	ON_WM_ERASEBKGND()
+	ON_WM_SIZE()
 END_MESSAGE_MAP()
 
 // CWinOGLView コンストラクション/デストラクション
 
 CWinOGLView::CWinOGLView() noexcept
 {
-	// TODO: 構築コードをここに追加します。
-
+	clickX = 0;
+	clickY = 0;
 }
 
 CWinOGLView::~CWinOGLView()
@@ -57,11 +57,18 @@ void CWinOGLView::OnDraw(CDC* pDC)
 	if (!pDoc)
 		return;
 
-	// TODO: この場所にネイティブ データ用の描画コードを追加します。
 	wglMakeCurrent(pDC->m_hDC, m_hRC);
 
 	glClearColor(0.0, 0.0, 0.0, 1.0);
-	glClear(GL_COLOR_BUFFER_BIT, /* GL_DEPTH_BUFFER_BIT */);
+	glClear(GL_COLOR_BUFFER_BIT /*GL_DEPTH_BUFFER_BIT*/);
+
+	//AC.Draw();
+
+	glBegin(GL_LINE_LOOP);
+	glVertex2f(-1.0, 0.5);
+	glVertex2f(0.0, -0.5);
+	glVertex2f(1.0, 0.5);
+	glEnd();
 
 	glFlush();
 	SwapBuffers(pDC->m_hDC);
@@ -96,8 +103,11 @@ CWinOGLDoc* CWinOGLView::GetDocument() const // デバッグ以外のバージ�
 
 void CWinOGLView::OnLButtonDown(UINT nFlags, CPoint point)
 {
-	// TODO: ここにメッセージ ハンドラー コードを追加するか、既定の処理を呼び出します。
+	SettingWindow(point);
 
+	//AC.CreateShape(clickX, clickY);
+
+	RedrawWindow();
 	CView::OnLButtonDown(nFlags, point);
 }
 
@@ -107,12 +117,12 @@ int CWinOGLView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	if (CView::OnCreate(lpCreateStruct) == -1)
 		return -1;
 
-	// TODO: ここに特定な作成コードを追加してください。
-	PIXELFORMATDESCRIPTOR pfd = {
+	PIXELFORMATDESCRIPTOR pfd =
+	{
 		sizeof(PIXELFORMATDESCRIPTOR),
 		1,
-		PFD_DRAW_TO_WINDOW|
-		PFD_SUPPORT_OPENGL|
+		PFD_DRAW_TO_WINDOW |
+		PFD_SUPPORT_OPENGL |
 		PFD_DOUBLEBUFFER,
 		PFD_TYPE_RGBA,
 		32,
@@ -124,6 +134,7 @@ int CWinOGLView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		0,
 		0,0,0
 	};
+
 	CClientDC clientDC(this);
 	int pixelFormat = ChoosePixelFormat(clientDC.m_hDC, &pfd);
 	SetPixelFormat(clientDC.m_hDC, pixelFormat, &pfd);
@@ -136,8 +147,75 @@ int CWinOGLView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 void CWinOGLView::OnDestroy()
 {
 	CView::OnDestroy();
-
-	// TODO: ここにメッセージ ハンドラー コードを追加します。
 	wglDeleteContext(m_hRC);
+}
 
+
+BOOL CWinOGLView::OnEraseBkgnd(CDC* pDC)
+{
+	return true;
+}
+
+
+void CWinOGLView::OnSize(UINT nType, int cx, int cy)
+{
+	CView::OnSize(nType, cx, cy);
+	CClientDC clientDC(this);
+	wglMakeCurrent(clientDC.m_hDC, m_hRC);
+
+	glViewport(0, 0, cx, cy);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+
+	double hi;
+
+	if (cx > cy)
+	{
+		hi = (double)cx / cy;
+		glOrtho(-1 * hi, 1 * hi, -1, 1, -100, 100);
+	}
+	else
+	{
+		hi = (double)cy / cx;
+		glOrtho(-1, 1, -1 * hi, 1 * hi, -100, 100);
+	}
+
+	glMatrixMode(GL_MODELVIEW);
+
+	RedrawWindow();
+	wglMakeCurrent(clientDC.m_hDC, NULL);
+}
+
+//最初のウィンドウの処理
+void CWinOGLView::SettingWindow(CPoint point)
+{
+	CRect rect;
+	GetClientRect(rect);
+
+	float hi;
+	float w = rect.Width();
+	float h = rect.Height();
+
+	clickX = (float)point.x / w;
+	clickY = 1 - (float)point.y / h;
+
+	if (w > h)
+	{
+		hi = (float)w / h;
+		clickX = (float)clickX * 2 - 1;
+		clickX = (float)clickX * hi;
+		clickY = (float)clickY * 2 - 1;
+		glOrtho(-1 * hi, 1 * hi, -1, 1, -100, 100);
+	}
+	else
+	{
+		hi = (float)h / w;
+		clickX = (float)clickX * 2 - 1;
+		clickY = (float)clickY * 2 - 1;
+		clickY = (float)clickY * hi;
+		glOrtho(-1, 1, -1 * hi, 1 * hi, -100, 100);
+	}
+
+	point.x = clickX;
+	point.y = clickY;
 }
